@@ -6,6 +6,10 @@ const style = document.createElement('style');
 style.innerHTML = `
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 
+.html{
+    background-color: #000000;
+}
+
 .expand-icon, .trash-icon {
     width: 16px;
     height: 16px;
