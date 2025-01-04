@@ -1,0 +1,199 @@
+// Clear the existing content of the page
+document.body.innerHTML = '';
+
+// Create a style element for Tailwind CSS
+const style = document.createElement('style');
+style.innerHTML = `
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
+`;
+document.head.appendChild(style);
+
+// Initialize IndexedDB
+const initDB = () => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('CameraDB', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('images')) {
+                db.createObjectStore('images', { keyPath: 'timestamp' });
+            }
+        };
+    });
+};
+
+// Store image in IndexedDB
+const storeImage = async (imageBlob) => {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['images'], 'readwrite');
+        const store = transaction.objectStore('images');
+        
+        const image = {
+            timestamp: Date.now(),
+            data: imageBlob
+        };
+        
+        const request = store.add(image);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+};
+
+// Retrieve images from IndexedDB
+const getImages = async () => {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['images'], 'readonly');
+        const store = transaction.objectStore('images');
+        const request = store.getAll();
+        
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+};
+
+// Create a container for the video and images
+const container = document.createElement('div');
+container.className = 'flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4';
+document.body.appendChild(container);
+
+// Create a video element
+const video = document.createElement('video');
+video.className = 'w-full max-w-full h-auto border-2 border-gray-300 rounded-lg shadow-lg mb-4';
+video.autoplay = true;
+video.muted = true;
+video.playsInline = true;
+container.appendChild(video);
+
+// Create a canvas for capturing images (hidden)
+const canvas = document.createElement('canvas');
+canvas.style.display = 'none';
+container.appendChild(canvas);
+
+// Create an image gallery container
+const gallery = document.createElement('div');
+gallery.className = 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4';
+container.appendChild(gallery);
+
+// Create a label for the switch
+const label = document.createElement('label');
+label.className = 'flex items-center cursor-pointer fixed bottom-10 right-6';
+document.body.appendChild(label);
+
+// Create a checkbox input for the switch
+const checkbox = document.createElement('input');
+checkbox.type = 'checkbox';
+checkbox.className = 'hidden';
+label.appendChild(checkbox);
+
+// Create a div for the switch styling
+const switchDiv = document.createElement('div');
+switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+label.appendChild(switchDiv);
+
+// Create a span for the switch knob
+const knob = document.createElement('span');
+knob.className = 'absolute w-6 h-6 bg-white rounded-full shadow transform transition duration-200 ease-in-out';
+switchDiv.appendChild(knob);
+
+// Capture image function
+const captureImage = () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0);
+    
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/jpeg', 0.95);
+    });
+};
+
+// Display images function
+const displayImages = async () => {
+    const images = await getImages();
+    gallery.innerHTML = '';
+    
+    images.sort((a, b) => b.timestamp - a.timestamp).forEach(image => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg shadow-lg p-4';
+        
+        const img = document.createElement('img');
+        img.className = 'w-full h-auto rounded';
+        img.src = URL.createObjectURL(image.data);
+        
+        const timestamp = document.createElement('p');
+        timestamp.className = 'text-sm text-gray-500 mt-2';
+        timestamp.textContent = new Date(image.timestamp).toLocaleString();
+        
+        card.appendChild(img);
+        card.appendChild(timestamp);
+        gallery.appendChild(card);
+    });
+};
+
+// Variable to hold the media stream
+let stream;
+
+// Function to start the video stream
+async function startVideo() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            } 
+        });
+        video.srcObject = stream;
+        console.log('Camera started');
+        
+        // Capture initial image
+        const imageBlob = await captureImage();
+        await storeImage(imageBlob);
+        await displayImages();
+    } catch (error) {
+        console.error('Error accessing the camera: ', error);
+        document.body.innerHTML = '<h1 class="text-red-500">Error accessing the camera</h1>';
+    }
+}
+
+// Function to toggle the camera
+async function toggleCamera() {
+    if (checkbox.checked) {
+        console.log('Turning camera on');
+        await startVideo();
+        knob.style.transform = 'translateX(100%)';
+        switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+    } else {
+        console.log('Turning camera off');
+        if (stream) {
+            // Capture final image before stopping
+            const imageBlob = await captureImage();
+            await storeImage(imageBlob);
+            
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            console.log('Camera stopped');
+            
+            await displayImages();
+        }
+        knob.style.transform = 'translateX(0)';
+        switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+    }
+}
+
+// Initialize
+(async () => {
+    await initDB();
+    await startVideo();
+    await displayImages();
+})();
+
+// Add event listener to the checkbox
+checkbox.addEventListener('change', toggleCamera);

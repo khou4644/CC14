@@ -1,0 +1,289 @@
+// Clear the existing content of the page
+document.body.innerHTML = '';
+
+// Create a style element for Tailwind CSS and custom styles
+const style = document.createElement('style');
+style.innerHTML = `
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
+
+.expand-icon {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.fullscreen-image {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+}
+`;
+document.head.appendChild(style);
+
+// Initialize IndexedDB
+const initDB = () => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('CameraDB', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('images')) {
+                db.createObjectStore('images', { keyPath: 'timestamp' });
+            }
+        };
+    });
+};
+
+// Store image in IndexedDB
+const storeImage = async (imageBlob) => {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['images'], 'readwrite');
+        const store = transaction.objectStore('images');
+        
+        const image = {
+            timestamp: Date.now() + performance.now() % 1, // Add sub-millisecond precision
+            data: imageBlob
+        };
+        
+        const request = store.add(image);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+};
+
+// Retrieve images from IndexedDB
+const getImages = async () => {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['images'], 'readonly');
+        const store = transaction.objectStore('images');
+        const request = store.getAll();
+        
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+};
+
+// Create expand icon SVG
+const createExpandIcon = () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'expand-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    
+    // Create expand arrows path
+    const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path1.setAttribute('d', 'M15 3h6v6');
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', 'M9 21H3v-6');
+    const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path3.setAttribute('d', 'M21 3l-7 7');
+    const path4 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path4.setAttribute('d', 'M3 21l7-7');
+    
+    svg.appendChild(path1);
+    svg.appendChild(path2);
+    svg.appendChild(path3);
+    svg.appendChild(path4);
+    
+    return svg;
+};
+
+// Create a container for the video and images
+const container = document.createElement('div');
+container.className = 'flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4';
+document.body.appendChild(container);
+
+// Create a video element
+const video = document.createElement('video');
+video.className = 'w-full max-w-full h-auto border-2 border-gray-300 rounded-lg shadow-lg mb-4';
+video.autoplay = true;
+video.muted = true;
+video.playsInline = true;
+container.appendChild(video);
+
+// Create a canvas for capturing images (hidden)
+const canvas = document.createElement('canvas');
+canvas.style.display = 'none';
+container.appendChild(canvas);
+
+// Create an image gallery container
+const gallery = document.createElement('div');
+gallery.className = 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4';
+container.appendChild(gallery);
+
+// Create a label for the switch
+const label = document.createElement('label');
+label.className = 'flex items-center cursor-pointer fixed bottom-10 right-6';
+document.body.appendChild(label);
+
+// Create a checkbox input for the switch
+const checkbox = document.createElement('input');
+checkbox.type = 'checkbox';
+checkbox.className = 'hidden';
+label.appendChild(checkbox);
+
+// Create a div for the switch styling
+const switchDiv = document.createElement('div');
+switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+label.appendChild(switchDiv);
+
+// Create a span for the switch knob
+const knob = document.createElement('span');
+knob.className = 'absolute w-6 h-6 bg-white rounded-full shadow transform transition duration-200 ease-in-out';
+switchDiv.appendChild(knob);
+
+// Function to show image in fullscreen
+const showFullscreen = (imgSrc) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'fullscreen-overlay';
+    
+    const img = document.createElement('img');
+    img.className = 'fullscreen-image';
+    img.src = imgSrc;
+    
+    overlay.appendChild(img);
+    
+    // Close on click
+    overlay.addEventListener('click', () => {
+        overlay.remove();
+    });
+    
+    document.body.appendChild(overlay);
+};
+
+// Capture image function
+const captureImage = () => {
+    return new Promise((resolve) => {
+        requestAnimationFrame(() => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                resolve(blob);
+            }, 'image/jpeg', 0.95);
+        });
+    });
+};
+
+// Display images function
+const displayImages = async () => {
+    const images = await getImages();
+    gallery.innerHTML = '';
+    
+    images.sort((a, b) => b.timestamp - a.timestamp).forEach(image => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg shadow-lg p-4';
+        
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'relative w-full aspect-video bg-gray-200 rounded overflow-hidden';
+        
+        const img = document.createElement('img');
+        img.className = 'w-full h-full object-cover';
+        img.src = URL.createObjectURL(image.data);
+        
+        imgContainer.appendChild(img);
+        
+        const timeContainer = document.createElement('div');
+        timeContainer.className = 'flex items-center justify-between mt-2 text-sm text-gray-500';
+        
+        const timestamp = document.createElement('span');
+        const date = new Date(image.timestamp);
+        timestamp.textContent = date.toLocaleString() + '.' + 
+            String(date.getMilliseconds()).padStart(3, '0');
+        
+        const expandIcon = createExpandIcon();
+        expandIcon.addEventListener('click', () => {
+            showFullscreen(img.src);
+        });
+        
+        timeContainer.appendChild(timestamp);
+        timeContainer.appendChild(expandIcon);
+        
+        card.appendChild(imgContainer);
+        card.appendChild(timeContainer);
+        gallery.appendChild(card);
+    });
+};
+
+// Variable to hold the media stream
+let stream;
+
+// Function to start the video stream
+async function startVideo() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        console.log('Camera started');
+        
+        video.onloadedmetadata = async () => {
+            const imageBlob = await captureImage();
+            await storeImage(imageBlob);
+            await displayImages();
+        };
+    } catch (error) {
+        console.error('Error accessing the camera: ', error);
+        document.body.innerHTML = '<h1 class="text-red-500">Error accessing the camera</h1>';
+    }
+}
+
+// Function to toggle the camera
+async function toggleCamera() {
+    if (checkbox.checked) {
+        console.log('Turning camera on');
+        await startVideo();
+        knob.style.transform = 'translateX(100%)';
+        switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+    } else {
+        console.log('Turning camera off');
+        if (stream) {
+            try {
+                const imageBlob = await captureImage();
+                await storeImage(imageBlob);
+                
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                console.log('Camera stopped');
+                
+                await displayImages();
+            } catch (error) {
+                console.error('Error during camera shutdown:', error);
+            }
+        }
+        knob.style.transform = 'translateX(0)';
+        switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+    }
+}
+
+// Initialize
+(async () => {
+    await initDB();
+    await startVideo();
+    await displayImages();
+})();
+
+// Add event listener to the checkbox
+checkbox.addEventListener('change', toggleCamera);
