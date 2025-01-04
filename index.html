@@ -3,10 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <title>Run Script</title>
+    <style>
+        .button {
+            @apply bg-blue-500 text-white font-bold py-2 px-4 rounded;
+        }
+    </style>
 </head>
-<body>
-    <script src="https://khou4644.github.io/CC14/working/cc6-0tg.js"></script>
+<body class="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <h1 class="text-2xl font-semibold mb-4">Choose a Script to Run</h1>
+    <button id="script1" class="button mb-2">Load Script "cc6-0tg.js"</button>
+    <button id="script2" class="button">Load Script "slatedoc106.js"</button>
+
+    <script>
+        document.getElementById('script1').addEventListener('click', () => {
+            loadScript('https://khou4644.github.io/CC14/working/cc6-0tg.js');
+        });
+
+        document.getElementById('script2').addEventListener('click', () => {
+            loadScript('https://raw.githubusercontent.com/khou4644/CC14/bbe8a954749eeb4ca13a8e20067a9294d78af91a/working/slatedoc106.js');
+        });
+
+        function loadScript(src) {
+            const script = document.createElement('script');
+            script.src = src;
+            document.body.appendChild(script);
+        }
+    </script>
 </body>
 </html>
