@@ -1,5 +1,5 @@
 // Clear the existing content of the page
-document.body.innerHTML = '';
+// document.body.innerHTML = '';
 
 // Create a style element for Tailwind CSS and custom styles
 const style = document.createElement('style');
