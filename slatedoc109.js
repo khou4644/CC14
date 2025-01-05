@@ -276,15 +276,36 @@ videoContainer.className = 'video-container w-full max-w-full shadow-lg sticky z
 container.appendChild(videoContainer);
 videoContainer.appendChild(video);
 
+// First, create the gallery 
+const gallery = document.createElement('div');
+gallery.className = 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20';
+container.appendChild(gallery);
+
+// Then create the camera selection card
+const cameraSelectCard = document.createElement('div');
+cameraSelectCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 mb-4';
+cameraSelectCard.innerHTML = `
+    <div class="flex items-center justify-between mb-2">
+        <div class="flex-grow">
+            <select id="camera-select" class="w-full p-2 border rounded-lg mr-2 focus:outline-none focus:border-blue-500">
+                <option value="">Loading cameras...</option>
+            </select>
+        </div>
+        <button id="prime-camera" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+            Prime Camera
+        </button>
+    </div>
+`;
+container.insertBefore(cameraSelectCard, gallery);
+
+// Get elements
+const cameraSelect = document.getElementById('camera-select');
+const primeButton = document.getElementById('prime-camera');
+
 // Create a canvas for capturing images (hidden)
 const canvas = document.createElement('canvas');
 canvas.style.display = 'none';
 container.appendChild(canvas);
-
-// Create an image gallery container
-const gallery = document.createElement('div');
-gallery.className = 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20';
-container.appendChild(gallery);
 
 // Create a label for the switch
 const label = document.createElement('label');
@@ -354,19 +375,31 @@ resolve(blob);
 let stream;
 
 // Function to start the video stream
-async function startVideo() {
+async function startVideo(deviceId = null) {
     try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    console.log('Camera started');
-    
-    video.onloadedmetadata = async () => {
-    const imageBlob = await captureImage();
-    await storeImage(imageBlob);
-    await displayImages();
-    };
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: deviceId ? { deviceId: { exact: deviceId } } : true
+        });
+        video.srcObject = stream;
+        console.log('Camera started');
+        
+        // Update toggle state
+        checkbox.checked = true;
+        knob.style.transform = 'translateX(24px)';
+        switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+        
+        // Only capture image if metadata loads
+        video.onloadedmetadata = async () => {
+            const imageBlob = await captureImage();
+            await storeImage(imageBlob);
+            await displayImages();
+        };
+        
+        // Enumerate cameras after getting permission
+        await enumerateCameras();
+        
     } catch (error) {
-        console.error('Error accessing the camera: ', error);
+        console.error('Error accessing the camera:', error);
         checkbox.checked = false;
         knob.style.transform = 'translateX(0)';
         switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
@@ -413,6 +446,67 @@ async function toggleCamera() {
         isTransitioning = false;
         label.classList.remove('switch-disabled');
         spinner.style.display = 'none';
+    }
+}
+
+// Function to enumerate cameras
+async function enumerateCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        // Clear and populate select
+        cameraSelect.innerHTML = '';
+        if (videoDevices.length === 0) {
+            cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+            primeButton.disabled = true;
+            return;
+        }
+        
+        videoDevices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+            cameraSelect.appendChild(option);
+        });
+        
+        primeButton.disabled = false;
+    } catch (error) {
+        console.error('Error enumerating cameras:', error);
+        cameraSelect.innerHTML = '<option value="">Error loading cameras</option>';
+        primeButton.disabled = true;
+    }
+}
+
+// Function to switch camera
+async function switchCamera(deviceId) {
+    if (!deviceId) return;
+    
+    try {
+        // Stop current stream if it exists
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Start new stream with selected camera
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                deviceId: { exact: deviceId }
+            }
+        });
+        video.srcObject = stream;
+        console.log('Switched to new camera');
+        
+        // Update toggle state if successful
+        checkbox.checked = true;
+        knob.style.transform = 'translateX(24px)';
+        switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+        
+    } catch (error) {
+        console.error('Error switching camera:', error);
+        checkbox.checked = false;
+        knob.style.transform = 'translateX(0)';
+        switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
     }
 }
 
@@ -516,7 +610,6 @@ const displayImages = async () => {
     await updateStorageInfo();
 };
 
-
 // storeImage function
 const storeImage = async (imageBlob) => {
     const db = await initDB();
@@ -541,10 +634,40 @@ const storeImage = async (imageBlob) => {
 // Initialize
 (async () => {
     await initDB();
-    await startVideo();
     await displayImages();
     await updateStorageInfo();
+    
+    // Just enumerate cameras without starting video
+    try {
+        const initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        initialStream.getTracks().forEach(track => track.stop());
+        await enumerateCameras();
+    } catch (error) {
+        console.error('Error getting initial camera permission:', error);
+        cameraSelect.innerHTML = '<option value="">Camera permission denied</option>';
+        primeButton.disabled = true;
+    }
 })();
 
 // Add event listener to the checkbox
 checkbox.addEventListener('change', toggleCamera);
+
+// Add event listeners for camera selection
+primeButton.addEventListener('click', async () => {
+    const selectedDeviceId = cameraSelect.value;
+    if (selectedDeviceId) {
+        await switchCamera(selectedDeviceId);
+    }
+});
+
+// Request permission and enumerate cameras on page load
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(async (initialStream) => {
+        initialStream.getTracks().forEach(track => track.stop());
+        await enumerateCameras();
+    })
+    .catch(error => {
+        console.error('Error getting initial camera permission:', error);
+        cameraSelect.innerHTML = '<option value="">Camera permission denied</option>';
+        primeButton.disabled = true;
+    });
