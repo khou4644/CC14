@@ -209,7 +209,7 @@ document.body.appendChild(container);
 
 // Create storage info card
 const storageCard = document.createElement('div');
-storageCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 mb-4 sticky top-0 z-50';
+storageCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 sticky top-0 z-50';  // Removed mb-4
 storageCard.innerHTML = `
     <div class="flex justify-between items-center mb-2">
         <div>
@@ -247,7 +247,7 @@ video.playsInline = true;
 
 // Create video container and add video to it
 const videoContainer = document.createElement('div');
-videoContainer.className = 'video-container w-full max-w-full shadow-lg mb-4 sticky top-24 z-40';
+videoContainer.className = 'video-container w-full max-w-full shadow-lg mb-4 sticky top-16 z-40';  // Changed top-24 to top-16
 container.appendChild(videoContainer);
 videoContainer.appendChild(video);
 
