@@ -391,7 +391,6 @@ const displayImages = async () => {
     gallery.innerHTML = '';
 
     const createThumbnail = async (blob) => {
-        if (!blob) return null;
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
@@ -409,11 +408,7 @@ const displayImages = async () => {
                 
                 canvas.toBlob((thumbnailBlob) => {
                     URL.revokeObjectURL(img.src);
-                    if (thumbnailBlob) {
-                        resolve(URL.createObjectURL(thumbnailBlob));
-                    } else {
-                        resolve(null);
-                    }
+                    resolve(URL.createObjectURL(thumbnailBlob));
                 }, 'image/jpeg', 0.85);
             };
             img.src = URL.createObjectURL(blob);
@@ -435,12 +430,8 @@ const displayImages = async () => {
         
         const img = document.createElement('img');
         img.className = 'w-16 h-auto object-contain';
-        if (image && image.data) {
-            const thumbnailUrl = await createThumbnail(image.data);
-            if (thumbnailUrl) {
-                img.src = thumbnailUrl;
-            }
-        }
+        const thumbnailUrl = await createThumbnail(image.data);
+        img.src = thumbnailUrl;
         
         const controlsContainer = document.createElement('div');
         controlsContainer.className = 'flex items-center space-x-2';
