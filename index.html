@@ -6,18 +6,14 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <title>Run Script</title>
     <style>
-        .button {
-            @apply bg-blue-500 text-white font-bold py-2 px-4 rounded;
-        }
+        /* Removed the @apply directive */
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100" style="background-color: slateblue; color: orangered;">
     <div class="flex flex-col items-center">
-        <h1 class="text-2xl font-semibold mb-4">Choose a Script to Run</h1>
+        <h1 class="text-2xl font-semibold mb-4 w-full text-center" style="background-color: darkslateblue;">Choose a Script to Run</h1>
         <div class="flex space-x-4 mb-4">
-            <!-- <button id="script1" class="button">Load Script "cc6-0tg.js"</button> -->
-            <button id="script2" class="button">Load Script "slatedoc109.js"</button>
-            <!-- <button id="script3" class="button">Load Script "cc6-0rn.js"</button> -->
+            <button id="script" style="background-color: darkslateblue; color: orangered; font-weight: bold; padding: 0.5rem 1rem; border-radius: 0.25rem; outline: none;">Load Script "slatedoc109.js"</button>
         </div>
     </div>
 
@@ -26,8 +22,8 @@
         //     loadScript('https://khou4644.github.io/CC14/working/cc6-0tg.js');
         // });
 
-        document.getElementById('script2').addEventListener('click', () => {
-            loadScript('https://khou4644.github.io/CC14/slatedoc109.js');
+        document.getElementById('script').addEventListener('click', () => {
+            loadScript('https://khou4644.github.io/CC14/working/slatedoc109.js');
         });
 
         // document.getElementById('script3').addEventListener('click', () => {
