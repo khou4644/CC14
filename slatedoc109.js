@@ -54,6 +54,31 @@ style.innerHTML = `
     border-radius: 0.5rem;
     overflow: hidden;
 }
+
+.loading-spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid #ffffff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+}
+
+@keyframes spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+.switch-disabled {
+    pointer-events: none;
+    opacity: 0.7;
+}
 `;
 document.head.appendChild(style);
 
@@ -209,7 +234,7 @@ document.body.appendChild(container);
 
 // Create storage info card
 const storageCard = document.createElement('div');
-storageCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 sticky top-0 z-50';  // Removed mb-4
+storageCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 sticky top-0 z-50 mb-4';  // Removed mb-4
 storageCard.innerHTML = `
     <div class="flex justify-between items-center mb-2">
         <div>
@@ -247,7 +272,7 @@ video.playsInline = true;
 
 // Create video container and add video to it
 const videoContainer = document.createElement('div');
-videoContainer.className = 'video-container w-full max-w-full shadow-lg mb-4 sticky top-16 z-40';  // Changed top-24 to top-16
+videoContainer.className = 'video-container w-full max-w-full shadow-lg sticky z-40';
 container.appendChild(videoContainer);
 videoContainer.appendChild(video);
 
@@ -277,9 +302,17 @@ const switchDiv = document.createElement('div');
 switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
 label.appendChild(switchDiv);
 
+// Add isTransitioning state variable
+let isTransitioning = false;
+
+// Create loading spinner
+const spinner = document.createElement('div');
+spinner.className = 'loading-spinner';
+switchDiv.appendChild(spinner);
+
 // Create a span for the switch knob
 const knob = document.createElement('span');
-knob.className = 'absolute w-6 h-6 bg-white rounded-full shadow transform transition duration-200 ease-in-out';
+knob.className = 'absolute w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ease-in-out top-1 left-1';
 switchDiv.appendChild(knob);
 
 // Function to show image in fullscreen
@@ -342,29 +375,44 @@ async function startVideo() {
 
 // Function to toggle the camera
 async function toggleCamera() {
-    if (checkbox.checked) {
-    console.log('Turning camera on');
-    await startVideo();
-    knob.style.transform = 'translateX(100%)';
-    switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
-    } else {
-    console.log('Turning camera off');
-    if (stream) {
+    if (isTransitioning) return;
+    
     try {
-    const imageBlob = await captureImage();
-    await storeImage(imageBlob);
-    
-    stream.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-    console.log('Camera stopped');
-    
-    await displayImages();
+        isTransitioning = true;
+        label.classList.add('switch-disabled');
+        spinner.style.display = 'block';
+        
+        if (checkbox.checked) {
+            console.log('Turning camera on');
+            await startVideo();
+            knob.style.transform = 'translateX(24px)';  // 6 units (1.5rem) in pixels
+            switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+        } else {
+            console.log('Turning camera off');
+            if (stream) {
+                try {
+                    const imageBlob = await captureImage();
+                    await storeImage(imageBlob);
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                    console.log('Camera stopped');
+                    
+                    await displayImages();
+                } catch (error) {
+                    console.error('Error during camera shutdown:', error);
+                }
+            }
+            knob.style.transform = 'translateX(0)';
+            switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+        }
     } catch (error) {
-    console.error('Error during camera shutdown:', error);
-    }
-    }
-    knob.style.transform = 'translateX(0)';
-    switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+        console.error('Camera toggle error:', error);
+        checkbox.checked = !checkbox.checked; // Revert checkbox state
+    } finally {
+        isTransitioning = false;
+        label.classList.remove('switch-disabled');
+        spinner.style.display = 'none';
     }
 }
 
