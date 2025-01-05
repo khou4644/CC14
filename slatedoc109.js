@@ -54,36 +54,6 @@ style.innerHTML = `
     border-radius: 0.5rem;
     overflow: hidden;
 }
-
-.gallery-section {
-    transition: max-height 0.3s ease-in-out;
-    overflow: hidden;
-}
-
-.gallery-header {
-    cursor: pointer;
-    user-select: none;
-    padding: 1rem;
-    background-color: white;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-}
-
-.gallery-header:hover {
-    background-color: #f9fafb;
-}
-
-.chevron-icon {
-    transition: transform 0.3s ease;
-}
-
-.chevron-icon.rotated {
-    transform: rotate(180deg);
-}
 `;
 document.head.appendChild(style);
 
@@ -286,39 +256,10 @@ const canvas = document.createElement('canvas');
 canvas.style.display = 'none';
 container.appendChild(canvas);
 
-// Create gallery section with header
-const gallerySection = document.createElement('div');
-gallerySection.className = 'gallery-section'; 
-gallerySection.style.maxHeight = '4rem'; // Start collapsed
-
-const galleryHeader = document.createElement('div');
-galleryHeader.className = 'gallery-header';
-galleryHeader.innerHTML = `
-    <span class="text-lg font-semibold">Image Gallery</span>
-    <svg class="chevron-icon w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 12 15 18 9"></polyline>
-    </svg>
-`;
-
-let isGalleryExpanded = false;
-galleryHeader.addEventListener('click', () => {
-    isGalleryExpanded = !isGalleryExpanded;
-    gallerySection.style.maxHeight = isGalleryExpanded ? '100vh' : '4rem';
-    const chevron = galleryHeader.querySelector('.chevron-icon');
-    if (isGalleryExpanded) {
-        chevron.classList.add('rotated');
-    } else {
-        chevron.classList.remove('rotated');
-    }
-});
-
 // Create an image gallery container
 const gallery = document.createElement('div');
 gallery.className = 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20';
-
-container.appendChild(gallerySection);
-gallerySection.appendChild(galleryHeader);
-gallerySection.appendChild(gallery);
+container.appendChild(gallery);
 
 // Create a label for the switch
 const label = document.createElement('label');
