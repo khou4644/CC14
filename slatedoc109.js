@@ -247,7 +247,7 @@ video.playsInline = true;
 
 // Create video container and add video to it
 const videoContainer = document.createElement('div');
-videoContainer.className = 'video-container w-full max-w-full shadow-lg mb-4 sticky top-32 z-40';
+videoContainer.className = 'video-container w-full max-w-full shadow-lg mb-4 sticky top-24 z-40';
 container.appendChild(videoContainer);
 videoContainer.appendChild(video);
 
