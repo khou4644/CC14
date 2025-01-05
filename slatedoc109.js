@@ -374,12 +374,27 @@ resolve(blob);
 // Variable to hold the media stream
 let stream;
 
+// Variable to store the current camera ID
+let currentCameraId = null;
+
 // Function to start the video stream
 async function startVideo(deviceId = null) {
     try {
+        // Use stored camera ID if no specific ID is provided
+        const targetDeviceId = deviceId || currentCameraId;
         stream = await navigator.mediaDevices.getUserMedia({
-            video: deviceId ? { deviceId: { exact: deviceId } } : true
+            video: targetDeviceId ? { deviceId: { exact: targetDeviceId } } : true
         });
+        
+        // Store the camera ID if successful
+        if (deviceId) {
+            currentCameraId = deviceId;
+            // Also update the select element to match
+            if (cameraSelect) {
+                cameraSelect.value = currentCameraId;
+            }
+        }
+        
         video.srcObject = stream;
         console.log('Camera started');
         
@@ -467,8 +482,18 @@ async function enumerateCameras() {
             const option = document.createElement('option');
             option.value = device.deviceId;
             option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+            // Set selected if this is the current camera
+            if (device.deviceId === currentCameraId) {
+                option.selected = true;
+            }
             cameraSelect.appendChild(option);
         });
+        
+        // If we have a currentCameraId but it wasn't found in the list, select the first camera
+        if (currentCameraId && !videoDevices.find(device => device.deviceId === currentCameraId)) {
+            currentCameraId = videoDevices[0].deviceId;
+            cameraSelect.value = currentCameraId;
+        }
         
         primeButton.disabled = false;
     } catch (error) {
@@ -487,6 +512,9 @@ async function switchCamera(deviceId) {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
+        
+        // Store the new camera ID before starting
+        currentCameraId = deviceId;
         
         // Start new stream with selected camera
         stream = await navigator.mediaDevices.getUserMedia({
@@ -507,6 +535,7 @@ async function switchCamera(deviceId) {
         checkbox.checked = false;
         knob.style.transform = 'translateX(0)';
         switchDiv.className = 'relative w-14 h-8 bg-red-500 rounded-full shadow-inner transition duration-200 ease-in-out';
+        currentCameraId = null; // Reset stored ID on error
     }
 }
 
@@ -671,3 +700,11 @@ navigator.mediaDevices.getUserMedia({ video: true })
         cameraSelect.innerHTML = '<option value="">Camera permission denied</option>';
         primeButton.disabled = true;
     });
+
+// Add event listener for camera selection
+cameraSelect.addEventListener('change', async () => {
+    const selectedDeviceId = cameraSelect.value;
+    if (selectedDeviceId) {
+        await switchCamera(selectedDeviceId);
+    }
+});
