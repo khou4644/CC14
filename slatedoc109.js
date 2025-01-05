@@ -288,7 +288,8 @@ container.appendChild(canvas);
 
 // Create gallery section with header
 const gallerySection = document.createElement('div');
-gallerySection.className = 'gallery-section max-h-16'; // Start collapsed
+gallerySection.className = 'gallery-section'; 
+gallerySection.style.maxHeight = '4rem'; // Start collapsed
 
 const galleryHeader = document.createElement('div');
 galleryHeader.className = 'gallery-header';
@@ -449,6 +450,7 @@ const displayImages = async () => {
     gallery.innerHTML = '';
 
     const createThumbnail = async (blob) => {
+        if (!blob) return null;
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
@@ -466,7 +468,11 @@ const displayImages = async () => {
                 
                 canvas.toBlob((thumbnailBlob) => {
                     URL.revokeObjectURL(img.src);
-                    resolve(URL.createObjectURL(thumbnailBlob));
+                    if (thumbnailBlob) {
+                        resolve(URL.createObjectURL(thumbnailBlob));
+                    } else {
+                        resolve(null);
+                    }
                 }, 'image/jpeg', 0.85);
             };
             img.src = URL.createObjectURL(blob);
@@ -488,9 +494,11 @@ const displayImages = async () => {
         
         const img = document.createElement('img');
         img.className = 'w-16 h-auto object-contain';
-        const thumbnailUrl = image.data ? await createThumbnail(image.data) : null;
-        if (thumbnailUrl) {
-            img.src = thumbnailUrl;
+        if (image && image.data) {
+            const thumbnailUrl = await createThumbnail(image.data);
+            if (thumbnailUrl) {
+                img.src = thumbnailUrl;
+            }
         }
         
         const controlsContainer = document.createElement('div');
