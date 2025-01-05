@@ -47,6 +47,44 @@ style.innerHTML = `
     background-color: #3b82f6;
     transition: width 0.3s ease;
 }
+
+.video-container {
+    background-color: #000000;
+    position: relative;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.gallery-section {
+    transition: max-height 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+.gallery-header {
+    cursor: pointer;
+    user-select: none;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.gallery-header:hover {
+    background-color: #f9fafb;
+}
+
+.chevron-icon {
+    transition: transform 0.3s ease;
+}
+
+.chevron-icon.rotated {
+    transform: rotate(180deg);
+}
+
 `;
 document.head.appendChild(style);
 
@@ -233,21 +271,54 @@ document.getElementById('delete-all').addEventListener('click', async () => {
 
 // Create a video element
 const video = document.createElement('video');
-video.className = 'w-full max-w-full h-auto border-2 border-gray-300 rounded-lg shadow-lg mb-4 sticky top-32 z-40';
+video.className = 'w-full max-w-full h-auto';
 video.autoplay = true;
 video.muted = true;
 video.playsInline = true;
-container.appendChild(video);
+
+// Create video container and add video to it
+const videoContainer = document.createElement('div');
+videoContainer.className = 'video-container w-full max-w-full shadow-lg mb-4 sticky top-32 z-40';
+container.appendChild(videoContainer);
+videoContainer.appendChild(video);
 
 // Create a canvas for capturing images (hidden)
 const canvas = document.createElement('canvas');
 canvas.style.display = 'none';
 container.appendChild(canvas);
 
+// Create gallery section with header
+const gallerySection = document.createElement('div');
+gallerySection.className = 'gallery-section max-h-16'; // Start collapsed
+
+const galleryHeader = document.createElement('div');
+galleryHeader.className = 'gallery-header';
+galleryHeader.innerHTML = `
+    <span class="text-lg font-semibold">Image Gallery</span>
+    <svg class="chevron-icon w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+`;
+
+let isGalleryExpanded = false;
+galleryHeader.addEventListener('click', () => {
+    isGalleryExpanded = !isGalleryExpanded;
+    gallerySection.style.maxHeight = isGalleryExpanded ? '100vh' : '4rem';
+    const chevron = galleryHeader.querySelector('.chevron-icon');
+    if (isGalleryExpanded) {
+        chevron.classList.add('rotated');
+    } else {
+        chevron.classList.remove('rotated');
+    }
+});
+
 // Create an image gallery container
 const gallery = document.createElement('div');
 gallery.className = 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20';
-container.appendChild(gallery);
+
+container.appendChild(gallerySection);
+gallerySection.appendChild(galleryHeader);
+gallerySection.appendChild(gallery);
 
 // Create a label for the switch
 const label = document.createElement('label');

@@ -11,11 +11,15 @@
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center h-screen bg-gray-100">
-    <h1 class="text-2xl font-semibold mb-4">Choose a Script to Run</h1>
-    <button id="script1" class="button mb-2">Load Script "cc6-0tg.js"</button>
-    <button id="script2" class="button">Load Script "slatedoc106.js"</button>
-    <button id="script3" class="button mb-2">Load Script "cc6-0rn.js"</button>
+<body class="bg-gray-100">
+    <div class="flex flex-col items-center">
+        <h1 class="text-2xl font-semibold mb-4">Choose a Script to Run</h1>
+        <div class="flex space-x-4 mb-4">
+            <button id="script1" class="button">Load Script "cc6-0tg.js"</button>
+            <button id="script2" class="button">Load Script "slatedoc106.js"</button>
+            <button id="script3" class="button">Load Script "cc6-0rn.js"</button>
+        </div>
+    </div>
 
     <script>
         document.getElementById('script1').addEventListener('click', () => {
