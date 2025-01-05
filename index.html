@@ -15,6 +15,7 @@
     <h1 class="text-2xl font-semibold mb-4">Choose a Script to Run</h1>
     <button id="script1" class="button mb-2">Load Script "cc6-0tg.js"</button>
     <button id="script2" class="button">Load Script "slatedoc106.js"</button>
+    <button id="script3" class="button mb-2">Load Script "cc6-0rn.js"</button>
 
     <script>
         document.getElementById('script1').addEventListener('click', () => {
@@ -23,6 +24,10 @@
 
         document.getElementById('script2').addEventListener('click', () => {
             loadScript('https://khou4644.github.io/CC14/working/slatedoc106.js');
+        });
+
+        document.getElementById('script3').addEventListener('click', () => {
+            loadScript('https://khou4644.github.io/CC14/working/cc6-0rn.js');
         });
 
         function loadScript(src) {
