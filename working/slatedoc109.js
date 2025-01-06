@@ -118,6 +118,11 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
+// Check for saved color preferences (move these to the top)
+const savedCardBgColor = localStorage.getItem('cardBackgroundColor');
+const savedCardTextColor = localStorage.getItem('cardTextColor');
+const savedInputBgColor = localStorage.getItem('inputBackgroundColor');
+
 // Add scroll to top button
 const scrollTopButton = document.createElement('button');
 scrollTopButton.className = 'fixed bottom-24 right-6 bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 focus:outline-none z-50 hidden';
@@ -262,6 +267,94 @@ svg.appendChild(path4);
 return svg;
 };
 
+// Create a reset icon function
+const createResetIcon = () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'reset-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.style.cursor = 'pointer';
+    
+    const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path1.setAttribute('d', 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8');
+    
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', 'M3 3v5h5');
+    
+    svg.appendChild(path1);
+    svg.appendChild(path2);
+    
+    return svg;
+};
+
+// Reset colors functionality
+const resetColors = () => {
+    const defaultColors = {
+        cardBackground: '#FFFFFF',
+        cardText: '#000000',
+        inputBackground: '#FFFFFF'
+    };
+
+    // Update color pickers
+    bgColorPicker.value = defaultColors.cardBackground;
+    textColorPicker.value = defaultColors.cardText;
+    inputBgColorPicker.value = defaultColors.inputBackground;
+
+    // Apply background color to all cards except video container
+    const cards = document.querySelectorAll('.card, .storage-usage-card, .camera-select-card');
+    cards.forEach(card => {
+        card.style.backgroundColor = defaultColors.cardBackground;
+    });
+
+    // Apply text color and outlines to all elements including video container
+    const elements = document.querySelectorAll(
+        '.card, .storage-usage-card, .camera-select-card, .video-container, ' +
+        'input:not([type="color"]), select, label, ' +
+        '.storage-info-text, .image-timestamp, ' +
+        '.expand-icon, .delete-icon, .trash-icon, .reset-icon, ' +
+        '#usage-bar-title'
+    );
+    elements.forEach(el => {
+        el.style.color = defaultColors.cardText;
+        // Add outline to cards and video container
+        if (el.classList.contains('card') || 
+            el.classList.contains('storage-usage-card') || 
+            el.classList.contains('camera-select-card') ||
+            el.classList.contains('video-container')) {
+            el.style.outline = `1px solid ${defaultColors.cardText}`;
+            el.style.outlineOffset = '1px';
+        }
+    });
+
+    // Apply input background color
+    const inputs = document.querySelectorAll('input:not([type="color"]), select');
+    inputs.forEach(input => {
+        input.style.backgroundColor = defaultColors.inputBackground;
+    });
+
+    // Update color picker display elements
+    document.querySelectorAll('.color-picker-display').forEach(display => {
+        if (display.parentElement.parentElement === bgColorPickerContainer) {
+            display.style.backgroundColor = defaultColors.cardBackground;
+        } else if (display.parentElement.parentElement === textColorPickerContainer) {
+            display.style.backgroundColor = defaultColors.cardText;
+        } else if (display.parentElement.parentElement === inputBgColorPickerContainer) {
+            display.style.backgroundColor = defaultColors.inputBackground;
+        }
+    });
+
+    // Clear localStorage
+    localStorage.removeItem('cardBackgroundColor');
+    localStorage.removeItem('cardTextColor');
+    localStorage.removeItem('inputBackgroundColor');
+};
+
 // Create a container for all elements
 document.body.className = 'bg-gray-100 min-h-screen overflow-y-auto';
 const container = document.createElement('div');
@@ -270,7 +363,9 @@ document.body.appendChild(container);
 
 // Create storage info card
 const storageCard = document.createElement('div');
-storageCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 sticky top-0 z-50 mb-4 storage-usage-card card';  // Removed mb-4
+storageCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 sticky top-0 z-50 mb-4 storage-usage-card card';
+storageCard.style.outline = '1px solid ' + (savedCardTextColor || '#000000');
+storageCard.style.outlineOffset = '1px';
 storageCard.innerHTML = `
     <div class="flex justify-between items-center mb-2">
         <div>
@@ -280,20 +375,30 @@ storageCard.innerHTML = `
                 <span id="image-count">0 images</span>
             </div>
         </div>
-        <button id="delete-all" class="text-red-500 hover:text-red-700 focus:outline-none">
-            ${createTrashIcon().outerHTML}
-        </button>
+        <div class="flex items-center space-x-3">
+            <button id="reset-colors" class="text-blue-500 hover:text-blue-700 focus:outline-none" title="Reset Colors">
+                ${createResetIcon().outerHTML}
+            </button>
+            <button id="delete-all" class="text-red-500 hover:text-red-700 focus:outline-none" title="Delete All Images">
+                ${createTrashIcon().outerHTML}
+            </button>
+        </div>
     </div>
     <div class="usage-bar">
         <div id="usage-fill" class="usage-fill" style="width: 0%"></div>
     </div>
 `;
 
-// Create color pickers for card background, text, and input background
-const colorControlContainer = document.createElement('div');
-colorControlContainer.className = 'flex space-x-2 items-center mt-4'; // Added mb-4 for margin bottom
+// After creating storageCard and setting its innerHTML...
+if (savedCardBgColor) {
+    storageCard.style.backgroundColor = savedCardBgColor;
+}
 
-// Background Color Picker
+// Create color pickers container
+const colorControlContainer = document.createElement('div');
+colorControlContainer.className = 'flex space-x-2 items-center mt-4';
+
+// Create background color picker container and elements
 const bgColorPickerContainer = document.createElement('div');
 bgColorPickerContainer.className = 'flex-1 flex flex-col';
 
@@ -306,7 +411,7 @@ bgColorPicker.type = 'color';
 bgColorPicker.value = '#FFFFFF'; // Default white
 bgColorPicker.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50';
 
-// Text Color Picker
+// Create text color picker container and elements
 const textColorPickerContainer = document.createElement('div');
 textColorPickerContainer.className = 'flex-1 flex flex-col';
 
@@ -315,11 +420,11 @@ textColorPickerLabel.textContent = 'Card Text Color: ';
 textColorPickerLabel.className = 'text-xs mb-1';
 
 const textColorPicker = document.createElement('input');
-textColorPicker.type = 'color'; // Changed back to color type
+textColorPicker.type = 'color';
 textColorPicker.value = '#000000'; // Default black
 textColorPicker.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50';
 
-// Input Background Color Picker
+// Create input background color picker container and elements
 const inputBgColorPickerContainer = document.createElement('div');
 inputBgColorPickerContainer.className = 'flex-1 flex flex-col';
 
@@ -329,6 +434,62 @@ inputBgColorPickerLabel.className = 'text-xs mb-1';
 
 const inputBgColorPicker = document.createElement('input');
 inputBgColorPicker.type = 'color';
+inputBgColorPicker.value = '#FFFFFF'; // Default white
+inputBgColorPicker.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50';
+
+// Apply saved text color if it exists
+if (savedCardTextColor) {
+    storageCard.style.color = savedCardTextColor;
+    storageCard.querySelector('#usage-bar-title').style.color = savedCardTextColor;
+    storageCard.querySelector('.storage-info-text').style.color = savedCardTextColor;
+    const deleteAllIcon = storageCard.querySelector('.trash-icon');
+    if (deleteAllIcon) {
+        deleteAllIcon.style.color = savedCardTextColor;
+    }
+    
+    textColorPicker.value = savedCardTextColor;
+    
+    const elements = document.querySelectorAll(
+        '.card, .storage-usage-card, .camera-select-card, ' +
+        'input:not([type="color"]), select, label, ' +
+        '.storage-info-text, .image-timestamp, ' +
+        '.expand-icon, .delete-icon, .trash-icon, ' +
+        '#usage-bar-title'
+    );
+    elements.forEach(el => {
+        el.style.color = savedCardTextColor;
+        if (el.classList.contains('card') || 
+            el.classList.contains('storage-usage-card') || 
+            el.classList.contains('camera-select-card')) {
+            el.style.outline = `1px solid ${savedCardTextColor}`;
+            el.style.outlineOffset = '1px';
+        }
+    });
+}
+
+// Background Color Picker
+bgColorPickerContainer.className = 'flex-1 flex flex-col';
+
+bgColorPickerLabel.textContent = 'Card Background Color: ';
+bgColorPickerLabel.className = 'text-xs mb-1';
+
+bgColorPicker.type = 'color';
+bgColorPicker.value = '#FFFFFF'; // Default white
+bgColorPicker.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50';
+
+// Text Color Picker
+textColorPickerContainer.className = 'flex-1 flex flex-col';
+textColorPickerLabel.textContent = 'Card Text Color: ';
+textColorPickerLabel.className = 'text-xs mb-1';
+
+textColorPicker.type = 'color'; // Changed back to color type
+textColorPicker.value = '#000000'; // Default black
+textColorPicker.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50';
+
+// Input Background Color Picker
+inputBgColorPickerContainer.className = 'flex-1 flex flex-col';
+inputBgColorPickerLabel.textContent = 'Input Background Color: ';
+inputBgColorPickerLabel.className = 'text-xs mb-1';inputBgColorPicker.type = 'color';
 inputBgColorPicker.value = '#FFFFFF'; // Default white
 inputBgColorPicker.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50';
 
@@ -344,7 +505,7 @@ bgColorPicker.addEventListener('input', (e) => {
 // Text Color Change Event
 textColorPicker.addEventListener('input', (e) => {
     const elements = document.querySelectorAll(
-        '.card, .storage-usage-card, .camera-select-card, ' +
+        '.card, .storage-usage-card, .camera-select-card, .video-container, ' +  // Added video-container
         'input:not([type="color"]), select, label, ' +
         '.storage-info-text, .image-timestamp, ' +
         '.expand-icon, .delete-icon, .trash-icon, ' +
@@ -352,6 +513,14 @@ textColorPicker.addEventListener('input', (e) => {
     );
     elements.forEach(el => {
         el.style.color = e.target.value;
+        // Add outline to cards and video container
+        if (el.classList.contains('card') || 
+            el.classList.contains('storage-usage-card') || 
+            el.classList.contains('camera-select-card') ||
+            el.classList.contains('video-container')) {  // Added video-container
+            el.style.outline = `1px solid ${e.target.value}`;
+            el.style.outlineOffset = '1px';
+        }
     });
     localStorage.setItem('cardTextColor', e.target.value);
 });
@@ -364,11 +533,6 @@ inputBgColorPicker.addEventListener('input', (e) => {
     });
     localStorage.setItem('inputBackgroundColor', e.target.value);
 });
-
-// Check for saved color preferences
-const savedCardBgColor = localStorage.getItem('cardBackgroundColor');
-const savedCardTextColor = localStorage.getItem('cardTextColor');
-const savedInputBgColor = localStorage.getItem('inputBackgroundColor');
 
 if (savedCardBgColor) {
     bgColorPicker.value = savedCardBgColor;
@@ -461,7 +625,7 @@ setTimeout(() => {
     enhanceColorPicker(inputBgColorPickerContainer, inputBgColorPicker);
 }, 0);
 
-// Append color pickers to container
+// Append all picker elements to their containers
 bgColorPickerContainer.appendChild(bgColorPickerLabel);
 bgColorPickerContainer.appendChild(bgColorPicker);
 
@@ -471,13 +635,15 @@ textColorPickerContainer.appendChild(textColorPicker);
 inputBgColorPickerContainer.appendChild(inputBgColorPickerLabel);
 inputBgColorPickerContainer.appendChild(inputBgColorPicker);
 
+// Add all picker containers to the main color control container
 colorControlContainer.appendChild(bgColorPickerContainer);
 colorControlContainer.appendChild(textColorPickerContainer);
 colorControlContainer.appendChild(inputBgColorPickerContainer);
 
-// Add color pickers to Storage Usage card
+// Add color control container to storage card
 storageCard.appendChild(colorControlContainer);
 
+// Add storage card to main container
 container.appendChild(storageCard);
 
 // Add delete all functionality
@@ -499,6 +665,8 @@ video.playsInline = true;
 // Create video container and add video to it
 const videoContainer = document.createElement('div');
 videoContainer.className = 'video-container w-full max-w-full shadow-lg sticky z-40';
+videoContainer.style.outline = '1px solid ' + (savedCardTextColor || '#000000');
+videoContainer.style.outlineOffset = '1px';
 container.appendChild(videoContainer);
 videoContainer.appendChild(video);
 
@@ -534,6 +702,8 @@ container.appendChild(gallery);
 // Then create the camera selection card
 const cameraSelectCard = document.createElement('div');
 cameraSelectCard.className = 'w-full max-w-full bg-white rounded-lg shadow-lg p-4 mb-4 camera-select-card card';
+cameraSelectCard.style.outline = '1px solid ' + (savedCardTextColor || '#000000');
+cameraSelectCard.style.outlineOffset = '1px';
 cameraSelectCard.innerHTML = `
     <div class="flex items-center justify-between mb-2">
         <div class="flex-grow">
@@ -547,6 +717,24 @@ cameraSelectCard.innerHTML = `
     </div>
 `;
 container.insertBefore(cameraSelectCard, gallery);
+
+// After setting cameraSelectCard innerHTML...
+if (savedCardBgColor) {
+    cameraSelectCard.style.backgroundColor = savedCardBgColor;
+}
+if (savedCardTextColor) {
+    cameraSelectCard.style.color = savedCardTextColor;
+    const select = cameraSelectCard.querySelector('select');
+    if (select) {
+        select.style.color = savedCardTextColor;
+    }
+}
+if (savedInputBgColor) {
+    const select = cameraSelectCard.querySelector('select');
+    if (select) {
+        select.style.backgroundColor = savedInputBgColor;
+    }
+}
 
 // Get elements
 const cameraSelect = document.getElementById('camera-select');
@@ -842,13 +1030,44 @@ const displayImages = async () => {
     for (const image of images.sort((a, b) => b.timestamp - a.timestamp)) {
         const card = document.createElement('div');
         card.className = 'bg-white rounded-lg shadow-lg p-4 card';
+
+        // Apply saved background color if it exists
+        const savedBgColor = localStorage.getItem('cardBackgroundColor');
+        if (savedBgColor) {
+            card.style.backgroundColor = savedBgColor;
+        }
+        
+        // Apply saved text color if it exists
+        const savedTextColor = localStorage.getItem('cardTextColor');
+        if (savedTextColor) {
+            card.style.color = savedTextColor;
+        }
+
+        // Apply saved styles
+        if (savedBgColor) {
+            card.style.backgroundColor = savedBgColor;
+        }
+        if (savedTextColor) {
+            card.style.color = savedTextColor;
+            card.style.outline = `1px solid ${savedTextColor}`;
+            card.style.outlineOffset = '1px';
+        } else {
+            card.style.outline = '1px solid #000000';
+            card.style.outlineOffset = '1px';
+        }
+
+
+        const timestamp = document.createElement('span');
+        timestamp.textContent = formatTimestamp(image.timestamp);
+        timestamp.className = 'image-timestamp';
+        if (savedTextColor) {
+            timestamp.style.color = savedTextColor;
+        }
         
         const timeContainer = document.createElement('div');
         timeContainer.className = 'flex items-center justify-between space-x-2 text-sm text-gray-500';
         
-        const timestamp = document.createElement('span');
-        timestamp.textContent = formatTimestamp(image.timestamp);
-        timestamp.className = 'image-timestamp';
+
         
         const imageAndControlsContainer = document.createElement('div');
         imageAndControlsContainer.className = 'flex items-center space-x-2';
@@ -866,9 +1085,15 @@ const displayImages = async () => {
             showFullscreen(URL.createObjectURL(image.data));
         });
         expandIcon.className = 'expand-icon';
+        if (savedTextColor) {
+            expandIcon.style.color = savedTextColor;
+        }
         
         const deleteIcon = createTrashIcon();
         deleteIcon.className = 'trash-icon text-red-500 hover:text-red-700 delete-icon';
+        if (savedTextColor) {
+            deleteIcon.style.color = savedTextColor;
+        }
         deleteIcon.addEventListener('click', async () => {
             if (confirm('Are you sure you want to delete this image?')) {
                 const db = await initDB();
@@ -889,6 +1114,13 @@ const displayImages = async () => {
         
         card.appendChild(timeContainer);
         gallery.appendChild(card);
+
+        if (savedTextColor) {
+            card.style.color = savedTextColor;
+            timestamp.style.color = savedTextColor;
+            expandIcon.style.color = savedTextColor;
+        }
+
     }
     
     await updateStorageInfo();
@@ -961,5 +1193,12 @@ cameraSelect.addEventListener('change', async () => {
     const selectedDeviceId = cameraSelect.value;
     if (selectedDeviceId) {
         await switchCamera(selectedDeviceId);
+    }
+});
+
+// Add event listener to reset button
+document.getElementById('reset-colors').addEventListener('click', () => {
+    if (confirm('Are you sure you want to reset all colors to default?')) {
+        resetColors();
     }
 });
