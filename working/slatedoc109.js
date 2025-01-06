@@ -944,39 +944,55 @@ const knob = document.createElement('span');
 knob.className = 'absolute w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ease-in-out top-1 left-1';
 switchDiv.appendChild(knob);
 
-// Function to show image in fullscreen
+// Simplified fullscreen function
 const showFullscreen = (imgSrc) => {
-const overlay = document.createElement('div');
-overlay.className = 'fullscreen-overlay';
+    try {
+        const overlay = document.createElement('div');
+        overlay.className = 'fullscreen-overlay';
 
-const img = document.createElement('img');
-img.className = 'fullscreen-image';
-img.src = imgSrc;
+        const img = document.createElement('img');
+        img.className = 'fullscreen-image';
+        img.src = imgSrc;
 
-overlay.appendChild(img);
+        img.onerror = () => {
+            overlay.remove();
+            URL.revokeObjectURL(imgSrc);
+        };
 
-// Close on click
-overlay.addEventListener('click', () => {
-overlay.remove();
-});
+        overlay.onclick = () => {
+            overlay.remove();
+            URL.revokeObjectURL(imgSrc);
+        };
 
-document.body.appendChild(overlay);
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+    } catch (error) {
+        console.error('Fullscreen error:', error);
+    }
 };
 
-// Capture image function
+// Capture image function - make more robust
 const captureImage = () => {
-return new Promise((resolve) => {
-requestAnimationFrame(() => {
-canvas.width = video.videoWidth;
-canvas.height = video.videoHeight;
-const context = canvas.getContext('2d');
-context.drawImage(video, 0, 0);
+    return new Promise((resolve, reject) => {
+        try {
+            requestAnimationFrame(() => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0);
 
-canvas.toBlob((blob) => {
-resolve(blob);
-}, 'image/jpeg', 0.95);
-});
-});
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to create blob'));
+                    }
+                }, 'image/jpeg', 0.95);
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
 };
 
 // Variable to hold the media stream
@@ -1029,7 +1045,7 @@ async function startVideo(deviceId = null) {
     }
 }
 
-// Function to toggle the camera
+// Modified toggleCamera function
 async function toggleCamera() {
     if (isTransitioning) return;
     
@@ -1041,20 +1057,25 @@ async function toggleCamera() {
         if (checkbox.checked) {
             console.log('Turning camera on');
             await startVideo();
-            knob.style.transform = 'translateX(24px)';  // 6 units (1.5rem) in pixels
+            knob.style.transform = 'translateX(24px)';
             switchDiv.className = 'relative w-14 h-8 bg-green-500 rounded-full shadow-inner transition duration-200 ease-in-out';
         } else {
             console.log('Turning camera off');
             if (stream) {
                 try {
-                    const imageBlob = await captureImage();
-                    await storeImage(imageBlob);
+                    // Take final image before stopping stream
+                    const imageBlob = await captureImage().catch(err => null);
                     
+                    // Stop stream first
                     stream.getTracks().forEach(track => track.stop());
                     video.srcObject = null;
                     console.log('Camera stopped');
                     
-                    await displayImages();
+                    // Then store image if we got one
+                    if (imageBlob) {
+                        await storeImage(imageBlob);
+                        await displayImages();
+                    }
                 } catch (error) {
                     console.error('Error during camera shutdown:', error);
                 }
@@ -1064,7 +1085,7 @@ async function toggleCamera() {
         }
     } catch (error) {
         console.error('Camera toggle error:', error);
-        checkbox.checked = !checkbox.checked; // Revert checkbox state
+        checkbox.checked = !checkbox.checked;
     } finally {
         isTransitioning = false;
         label.classList.remove('switch-disabled');
@@ -1172,47 +1193,45 @@ const displayImages = async () => {
     const images = await getImages();
     gallery.innerHTML = '';
 
+    // Create thumbnail function - simplified for iOS 14
     const createThumbnail = async (blob) => {
         return new Promise((resolve, reject) => {
-            const img = new Image();
-            const objectUrl = URL.createObjectURL(blob);
-            
-            img.onload = () => {
-                try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const thumbnailWidth = 64;
-                    const aspectRatio = img.width / img.height;
-                    const thumbnailHeight = thumbnailWidth / aspectRatio;
-                    
-                    canvas.width = thumbnailWidth;
-                    canvas.height = thumbnailHeight;
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    ctx.drawImage(img, 0, 0, thumbnailWidth, thumbnailHeight);
-                    
-                    canvas.toBlob((thumbnailBlob) => {
-                        URL.revokeObjectURL(objectUrl);
-                        if (thumbnailBlob) {
-                            resolve(URL.createObjectURL(thumbnailBlob));
-                        } else {
-                            // If thumbnail creation fails, use original blob
-                            resolve(objectUrl);
-                        }
-                    }, 'image/jpeg', 0.85);
-                } catch (error) {
-                    console.error('Error creating thumbnail:', error);
-                    // Fallback to original image
-                    resolve(objectUrl);
-                }
-            };
-            
-            img.onerror = () => {
-                URL.revokeObjectURL(objectUrl);
-                reject(new Error('Failed to load image'));
-            };
-            
-            img.src = objectUrl;
+            try {
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 64;  // Fixed thumbnail width
+                        canvas.height = Math.floor(64 * (img.height / img.width));
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        canvas.toBlob((thumbBlob) => {
+                            URL.revokeObjectURL(url);
+                            if (thumbBlob) {
+                                resolve(URL.createObjectURL(thumbBlob));
+                            } else {
+                                resolve(url);
+                            }
+                        }, 'image/jpeg', 0.8);
+                    } catch (err) {
+                        URL.revokeObjectURL(url);
+                        resolve(URL.createObjectURL(blob));
+                    }
+                };
+                
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(URL.createObjectURL(blob));
+                };
+                
+                img.src = url;
+            } catch (error) {
+                resolve(URL.createObjectURL(blob));
+            }
         });
     };
 
