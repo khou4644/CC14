@@ -6,6 +6,11 @@ const style = document.createElement('style');
 style.innerHTML = `
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 
+.card, .storage-usage-card, .camera-select-card, .video-container {
+    border-radius: 0.5rem;
+    outline-offset: 2px;
+}
+
 .expand-icon, .trash-icon {
     width: 16px;
     height: 16px;
@@ -202,15 +207,15 @@ const updateStorageInfo = async () => {
 
 // Retrieve images from IndexedDB
 const getImages = async () => {
-const db = await initDB();
-return new Promise((resolve, reject) => {
-const transaction = db.transaction(['images'], 'readonly');
-const store = transaction.objectStore('images');
-const request = store.getAll();
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['images'], 'readonly');
+    const store = transaction.objectStore('images');
+    const request = store.getAll();
 
-request.onsuccess = () => resolve(request.result);
-request.onerror = () => reject(request.error);
-});
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+    });
 };
 
 // Create trash icon SVG
@@ -293,6 +298,66 @@ const createResetIcon = () => {
     return svg;
 };
 
+// Create export icon SVG
+const createExportIcon = () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'export-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.style.cursor = 'pointer';
+    
+    const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path1.setAttribute('d', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4');
+    
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', 'M7 10l5 5 5-5');
+    
+    const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path3.setAttribute('d', 'M12 15V3');
+    
+    svg.appendChild(path1);
+    svg.appendChild(path2);
+    svg.appendChild(path3);
+    
+    return svg;
+};
+
+// Create import icon SVG
+const createImportIcon = () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'import-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.style.cursor = 'pointer';
+    
+    const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path1.setAttribute('d', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4');
+    
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', 'M7 10l5-5 5 5');
+    
+    const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path3.setAttribute('d', 'M12 4v12');
+    
+    svg.appendChild(path1);
+    svg.appendChild(path2);
+    svg.appendChild(path3);
+    
+    return svg;
+};
+
 // Reset colors functionality
 const resetColors = () => {
     const defaultColors = {
@@ -306,29 +371,30 @@ const resetColors = () => {
     textColorPicker.value = defaultColors.cardText;
     inputBgColorPicker.value = defaultColors.inputBackground;
 
-    // Apply background color to all cards except video container
-    const cards = document.querySelectorAll('.card, .storage-usage-card, .camera-select-card');
-    cards.forEach(card => {
+    // Apply background color to all cards including gallery cards
+    const allCards = document.querySelectorAll('.card, .storage-usage-card, .camera-select-card');
+    allCards.forEach(card => {
         card.style.backgroundColor = defaultColors.cardBackground;
     });
 
-    // Apply text color and outlines to all elements including video container
+    // Apply text color and borders to all elements including video container
     const elements = document.querySelectorAll(
         '.card, .storage-usage-card, .camera-select-card, .video-container, ' +
         'input:not([type="color"]), select, label, ' +
         '.storage-info-text, .image-timestamp, ' +
-        '.expand-icon, .delete-icon, .trash-icon, .reset-icon, ' +
-        '#usage-bar-title'
+        '.expand-icon, .delete-icon, .trash-icon, .reset-icon, .export-icon, .import-icon, ' +
+        '#reset-colors, #usage-bar-title'
     );
     elements.forEach(el => {
         el.style.color = defaultColors.cardText;
-        // Add outline to cards and video container
+        // Clear old outline/border first, then add new border
         if (el.classList.contains('card') || 
             el.classList.contains('storage-usage-card') || 
             el.classList.contains('camera-select-card') ||
             el.classList.contains('video-container')) {
-            el.style.outline = `1px solid ${defaultColors.cardText}`;
-            el.style.outlineOffset = '1px';
+            el.style.outline = 'none';  // Clear old outline
+            el.style.border = `1px solid ${defaultColors.cardText}`;
+            el.style.borderRadius = '0.5rem';
         }
     });
 
@@ -355,6 +421,11 @@ const resetColors = () => {
     localStorage.removeItem('inputBackgroundColor');
 };
 
+// JSZip library
+const jsZipScript = document.createElement('script');
+jsZipScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+document.head.appendChild(jsZipScript);
+
 // Create a container for all elements
 document.body.className = 'bg-gray-100 min-h-screen overflow-y-auto';
 const container = document.createElement('div');
@@ -376,6 +447,12 @@ storageCard.innerHTML = `
             </div>
         </div>
         <div class="flex items-center space-x-3">
+            <button id="import-all" class="text-blue-500 hover:text-blue-700 focus:outline-none" title="Import Images">
+                ${createImportIcon().outerHTML}
+            </button>
+            <button id="export-all" class="text-blue-500 hover:text-blue-700 focus:outline-none" title="Export All Images">
+                ${createExportIcon().outerHTML}
+            </button>
             <button id="reset-colors" class="text-blue-500 hover:text-blue-700 focus:outline-none" title="Reset Colors">
                 ${createResetIcon().outerHTML}
             </button>
@@ -393,6 +470,82 @@ storageCard.innerHTML = `
 if (savedCardBgColor) {
     storageCard.style.backgroundColor = savedCardBgColor;
 }
+
+// Create hidden file input for import
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = '.zip';
+fileInput.style.display = 'none';
+fileInput.addEventListener('change', (e) => importImages(e.target.files));
+document.body.appendChild(fileInput);
+
+// Add export/import functions first
+const exportAllImages = async () => {
+    const images = await getImages();
+    if (images.length === 0) {
+        alert('No images to export');
+        return;
+    }
+
+    try {
+        const zip = new JSZip();
+        
+        // Add each image to the zip
+        for (const image of images) {
+            const fileName = `image_${formatTimestamp(image.timestamp).replace(/[:.]/g, '-')}.jpg`;
+            zip.file(fileName, image.data);
+        }
+        
+        // Generate and download the zip file
+        const zipBlob = await zip.generateAsync({type: 'blob'});
+        const downloadUrl = URL.createObjectURL(zipBlob);
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `camera_captures_${new Date().toISOString().slice(0,10)}.zip`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting images. Please try again.');
+    }
+};
+
+const importImages = async (files) => {
+    if (!files.length) return;
+
+    try {
+        const zip = new JSZip();
+        const zipContent = await zip.loadAsync(files[0]);
+        
+        let importCount = 0;
+        // Process each file in the zip
+        for (const [fileName, file] of Object.entries(zipContent.files)) {
+            if (!fileName.endsWith('.jpg')) continue;
+            
+            const blob = await file.async('blob');
+            const timestamp = Date.now() + performance.now() % 1 + importCount;
+            await storeImage(blob);
+            importCount++;
+        }
+        
+        await displayImages();
+        await updateStorageInfo();
+        alert(`Successfully imported ${importCount} images`);
+    } catch (error) {
+        console.error('Import error:', error);
+        alert('Error importing images. Please make sure you selected a valid zip file.');
+    }
+};
+
+// Add event listeners AFTER adding storageCard to container
+container.appendChild(storageCard);
+
+// Now add the event listeners
+document.getElementById('import-all').addEventListener('click', () => fileInput.click());
+document.getElementById('export-all').addEventListener('click', exportAllImages);
 
 // Create color pickers container
 const colorControlContainer = document.createElement('div');
@@ -442,10 +595,10 @@ if (savedCardTextColor) {
     storageCard.style.color = savedCardTextColor;
     storageCard.querySelector('#usage-bar-title').style.color = savedCardTextColor;
     storageCard.querySelector('.storage-info-text').style.color = savedCardTextColor;
-    const deleteAllIcon = storageCard.querySelector('.trash-icon');
-    if (deleteAllIcon) {
-        deleteAllIcon.style.color = savedCardTextColor;
-    }
+    const allIcons = storageCard.querySelectorAll('.trash-icon, .reset-icon, .export-icon, .import-icon');
+    allIcons.forEach(icon => {
+        icon.style.color = savedCardTextColor;
+    });
     
     textColorPicker.value = savedCardTextColor;
     
@@ -453,8 +606,8 @@ if (savedCardTextColor) {
         '.card, .storage-usage-card, .camera-select-card, ' +
         'input:not([type="color"]), select, label, ' +
         '.storage-info-text, .image-timestamp, ' +
-        '.expand-icon, .delete-icon, .trash-icon, ' +
-        '#usage-bar-title'
+        '.expand-icon, .delete-icon, .trash-icon, .reset-icon, .export-icon, .import-icon, ' +
+        '#reset-colors, #usage-bar-title'
     );
     elements.forEach(el => {
         el.style.color = savedCardTextColor;
@@ -505,21 +658,21 @@ bgColorPicker.addEventListener('input', (e) => {
 // Text Color Change Event
 textColorPicker.addEventListener('input', (e) => {
     const elements = document.querySelectorAll(
-        '.card, .storage-usage-card, .camera-select-card, .video-container, ' +  // Added video-container
+        '.card, .storage-usage-card, .camera-select-card, .video-container, ' +
         'input:not([type="color"]), select, label, ' +
         '.storage-info-text, .image-timestamp, ' +
-        '.expand-icon, .delete-icon, .trash-icon, ' +
-        '#usage-bar-title'
+        '.expand-icon, .delete-icon, .trash-icon, .reset-icon, .export-icon, .import-icon, ' +  // Added export-icon and import-icon
+        '#reset-colors, #usage-bar-title'
     );
     elements.forEach(el => {
         el.style.color = e.target.value;
-        // Add outline to cards and video container
         if (el.classList.contains('card') || 
             el.classList.contains('storage-usage-card') || 
             el.classList.contains('camera-select-card') ||
-            el.classList.contains('video-container')) {  // Added video-container
-            el.style.outline = `1px solid ${e.target.value}`;
-            el.style.outlineOffset = '1px';
+            el.classList.contains('video-container')) {
+            el.style.outline = 'none';
+            el.style.border = `1px solid ${e.target.value}`;
+            el.style.borderRadius = '0.5rem';
         }
     });
     localStorage.setItem('cardTextColor', e.target.value);
@@ -569,19 +722,23 @@ function enhanceColorPicker(pickerContainer, picker) {
     // Create a wrapper to handle click events more robustly
     const wrapper = document.createElement('div');
     wrapper.className = 'relative color-picker-wrapper';
+    wrapper.style.cursor = 'pointer';
     
     // Create a clickable display element
-    const displayElement = document.createElement('div');
+    const displayElement = document.createElement('button');  // Changed to button for better click handling
+    displayElement.type = 'button';  // Prevent form submission
     displayElement.className = 'color-picker-display w-full h-10 border rounded cursor-pointer';
     displayElement.style.backgroundColor = picker.value;
+    displayElement.style.outline = 'none';  // Remove default button outline
     
     // Modify picker styling
     picker.style.width = '100%';
     picker.style.position = 'absolute';
-    picker.style.top = '100%';
+    picker.style.top = 'calc(100% + 5px)';  // Add small gap
     picker.style.left = '0';
-    picker.style.zIndex = '10';
+    picker.style.zIndex = '50';  // Increased z-index
     picker.style.display = 'none';
+    picker.style.opacity = '1';  // Ensure picker is visible
     
     // Wrap the picker
     wrapper.appendChild(displayElement);
@@ -590,20 +747,28 @@ function enhanceColorPicker(pickerContainer, picker) {
     // Replace the original container content
     pickerContainer.innerHTML = '';
     pickerContainer.appendChild(wrapper);
-    
-    // Toggle picker visibility
-    displayElement.addEventListener('click', (e) => {
+
+    // Function to toggle picker
+    const togglePicker = (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        if (picker.style.display === 'none') {
-            picker.style.display = 'block';
+        const isVisible = picker.style.display === 'block';
+        picker.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
             picker.focus();
-        } else {
-            picker.style.display = 'none';
         }
-    });
+    };
+    
+    // Add click event to both wrapper and display element
+    wrapper.addEventListener('click', togglePicker);
+    displayElement.addEventListener('click', togglePicker);
     
     // Update display when color changes
     picker.addEventListener('input', () => {
+        displayElement.style.backgroundColor = picker.value;
+    });
+
+    picker.addEventListener('change', () => {
         displayElement.style.backgroundColor = picker.value;
         picker.style.display = 'none';
     });
@@ -614,16 +779,21 @@ function enhanceColorPicker(pickerContainer, picker) {
             picker.style.display = 'none';
         }
     });
+
+    // Prevent clicks on the picker from closing it
+    picker.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
     
     return wrapper;
 }
 
-// Apply enhancement to existing color pickers after they're created
+// Apply enhancement after a short delay to ensure DOM is ready
 setTimeout(() => {
     enhanceColorPicker(bgColorPickerContainer, bgColorPicker);
     enhanceColorPicker(textColorPickerContainer, textColorPicker);
     enhanceColorPicker(inputBgColorPickerContainer, inputBgColorPicker);
-}, 0);
+}, 100);
 
 // Append all picker elements to their containers
 bgColorPickerContainer.appendChild(bgColorPickerLabel);
@@ -1003,27 +1173,46 @@ const displayImages = async () => {
     gallery.innerHTML = '';
 
     const createThumbnail = async (blob) => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const img = new Image();
+            const objectUrl = URL.createObjectURL(blob);
+            
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const thumbnailWidth = 64;
-                const aspectRatio = img.width / img.height;
-                const thumbnailHeight = thumbnailWidth / aspectRatio;
-                
-                canvas.width = thumbnailWidth;
-                canvas.height = thumbnailHeight;
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(img, 0, 0, thumbnailWidth, thumbnailHeight);
-                
-                canvas.toBlob((thumbnailBlob) => {
-                    URL.revokeObjectURL(img.src);
-                    resolve(URL.createObjectURL(thumbnailBlob));
-                }, 'image/jpeg', 0.85);
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const thumbnailWidth = 64;
+                    const aspectRatio = img.width / img.height;
+                    const thumbnailHeight = thumbnailWidth / aspectRatio;
+                    
+                    canvas.width = thumbnailWidth;
+                    canvas.height = thumbnailHeight;
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, thumbnailWidth, thumbnailHeight);
+                    
+                    canvas.toBlob((thumbnailBlob) => {
+                        URL.revokeObjectURL(objectUrl);
+                        if (thumbnailBlob) {
+                            resolve(URL.createObjectURL(thumbnailBlob));
+                        } else {
+                            // If thumbnail creation fails, use original blob
+                            resolve(objectUrl);
+                        }
+                    }, 'image/jpeg', 0.85);
+                } catch (error) {
+                    console.error('Error creating thumbnail:', error);
+                    // Fallback to original image
+                    resolve(objectUrl);
+                }
             };
-            img.src = URL.createObjectURL(blob);
+            
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Failed to load image'));
+            };
+            
+            img.src = objectUrl;
         });
     };
 
