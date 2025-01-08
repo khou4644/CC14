@@ -25,16 +25,18 @@
         document.getElementById('script').addEventListener('click', () => {
             loadScript('https://khou4644.github.io/CC14/working/slatedoc109.js');
         });
-
+    
         document.getElementById('truth').addEventListener('click', () => {
-            loadScript('https://khou4644.github.io/CC14/working/rokutruth.js'); // Updated to load the correct script
+            loadScript('https://khou4644.github.io/CC14/working/rokutruth.js'); // Ensure this script is a module
         });
-
+    
         function loadScript(src) {
             const script = document.createElement('script');
             script.src = src;
+            script.type = 'module'; // Specify that this is a module
             document.body.appendChild(script);
         }
     </script>
+
 </body>
 </html>
