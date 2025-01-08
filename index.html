@@ -6,7 +6,6 @@
     <link rel="icon" href="https://khou4644.github.io/CC14/favicon.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <title>Run Script</title>
     <style>
         /* Removed the @apply directive */
@@ -18,12 +17,17 @@
         <h1 class="text-2xl font-semibold mb-4 w-full text-center" style="background-color: darkorchid;">Choose a Script to Run</h1>
         <div class="flex space-x-4 mb-4">
             <button id="script" style="background-color: darkslateblue; color: orangered; font-weight: bold; padding: 0.5rem 1rem; border-radius: 0.25rem; outline: none;">Load Script "slatedoc109.js"</button>
+            <button id="truth" style="background-color: darkslateblue; color: orangered; font-weight: bold; padding: 0.5rem 1rem; border-radius: 0.25rem; outline: none;">Load Funny Roku Reality "rokutruth.js"</button>
         </div>
     </div>
 
     <script>
         document.getElementById('script').addEventListener('click', () => {
             loadScript('https://khou4644.github.io/CC14/working/slatedoc109.js');
+        });
+
+        document.getElementById('truth').addEventListener('click', () => {
+            loadScript('https://khou4644.github.io/CC14/working/rokutruth.js'); // Updated to load the correct script
         });
 
         function loadScript(src) {
