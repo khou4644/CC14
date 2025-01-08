@@ -22,19 +22,33 @@
     </div>
 
     <script>
+        // Function to get URL parameters
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function loadScript(src) {
+            const script = document.createElement('script');
+            script.src = src;
+            script.type = 'module';
+            document.body.appendChild(script);
+        }
+
         document.getElementById('script').addEventListener('click', () => {
             loadScript('https://khou4644.github.io/CC14/working/slatedoc109.js');
         });
     
         document.getElementById('truth').addEventListener('click', () => {
-            loadScript('https://khou4644.github.io/CC14/working/rokutruth.js'); // Ensure this script is a module
+            loadScript('https://khou4644.github.io/CC14/working/rokutruth.js');
         });
-    
-        function loadScript(src) {
-            const script = document.createElement('script');
-            script.src = src;
-            script.type = 'module'; // Specify that this is a module
-            document.body.appendChild(script);
+
+        // Check for auto-load parameter
+        const autoLoad = getQueryParam('load');
+        if (autoLoad === 'roku') {
+            loadScript('https://khou4644.github.io/CC14/working/rokutruth.js');
+        } else if (autoLoad === 'slate') {
+            loadScript('https://khou4644.github.io/CC14/working/slatedoc109.js');
         }
     </script>
 
