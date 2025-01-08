@@ -1,5 +1,23 @@
-import React, { useState } from 'react';
-import { Slider } from '@/components/ui/slider';
+// Clear the existing content of the page
+document.body.innerHTML = '';
+
+// Create a style element for Tailwind CSS and custom styles
+const style = document.createElement('style');
+style.innerHTML = `
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
+
+/* Add any custom styles here */
+body {
+    background-color: black; /* Example custom style */
+    color: white; /* Example custom style */
+}
+`;
+document.head.appendChild(style);
+
+// Import React and other necessary components at the top level
+import React, { useState } from 'https://cdn.skypack.dev/react';
+import ReactDOM from 'https://cdn.skypack.dev/react-dom';
+import { Slider } from 'https://your-slider-library-url'; // Update with the correct URL for your Slider component
 
 const Article = () => {
   const [fontSize, setFontSize] = useState(16);
@@ -60,7 +78,8 @@ const Article = () => {
         <p className="mt-6 leading-relaxed">
           So you end up with situations like we're seeing with the network stack - where avoiding certain 
           implementations for legal reasons leads to technically inferior solutions, while competitors simply 
-          ignore these constraints entirely. It's a perfect example of how IP law can actually hinder 
+          ignore these constraints entirely. It's a perfect example
+ of how IP law can actually hinder 
           innovation rather than protect it.
         </p>
 
